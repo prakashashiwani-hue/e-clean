@@ -51,7 +51,3 @@ yarn-debug.log*
 **/.cache
 .DS_Store
 
-# Unrelated apps in monorepo to speed up EAS upload
-apps/api
-apps/authority-web
-apps/recycling-partner-web
