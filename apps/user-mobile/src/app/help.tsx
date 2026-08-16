@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-
+import { prisma } from "db/client"
+import { SafeAreaView } from 'react-native-safe-area-context';
 export default function HelpSupportScreen() {
   const router = useRouter();
 

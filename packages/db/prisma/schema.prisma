@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -12,18 +7,348 @@ datasource db {
   provider = "postgresql"
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int?
+// -------------------------
+// ENUMS
+// -------------------------
+
+enum Role {
+  CITIZEN
+  WORKER
+  AUTHORITY
+  RECYCLING_PARTNER // staff logins for a recycling partner org
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+// AI_ASSESSED fires automatically once the AI pipeline finishes on the image.
+// No human "assessment" step exists.
+enum ReportStatus {
+  PENDING // citizen submitted, AI pipeline running
+  AI_ASSESSED // AI filled dumpType/wasteCategory/volume/truckSize/recommendedAction
+  ASSIGNED // authority assigned a worker (or routed to a recycling partner)
+  IN_PROGRESS // worker started cleanup
+  CLEANUP_COMPLETED // worker uploaded before/after photos, OR partner marked collected
+  RESOLVED // authority marked resolved
+  VERIFIED // citizen confirmed it's actually clean
+  DISPUTED // citizen says it's not actually clean
+  CANCELLED
+}
+
+enum AttentionLevel {
+  NORMAL
+  URGENT // AI-flagged: hazardous / bio-waste / drain-blocking / sensitive-location adjacent
+}
+
+enum DumpType {
+  OVERFLOWING_BIN
+  OPEN_DUMP
+  ROAD_SIDE_DUMP
+  DRAIN_DUMP
+  VACANT_LAND
+  CONSTRUCTION_DUMP
+  ILLEGAL_DUMPING
+  OTHER
+}
+
+enum WasteCategory {
+  HOUSEHOLD
+  PLASTIC
+  ORGANIC
+  CONSTRUCTION
+  ELECTRONIC
+  MEDICAL
+  HAZARDOUS
+  MIXED
+  OTHER
+}
+
+enum WasteVolume {
+  SMALL
+  MEDIUM
+  LARGE
+  VERY_LARGE
+}
+
+enum TruckSize {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+// What the authority dashboard shows as the AI's recommended intervention.
+enum InterventionType {
+  MANUAL_CLEANUP // small litter -> manual team, no truck
+  WORKER_TRUCK_DISPATCH // large pile -> extra workers + truck
+  RECYCLING_PARTNER // recyclable-heavy -> route to partner
+  ESCALATION // hazardous / bio-waste / drain-blocking / sensitive-location
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+enum ReportImageType {
+  REPORT // citizen's original submission
+  BEFORE_CLEANUP // worker's before photo
+  AFTER_CLEANUP // worker's after photo
+  COLLECTION_PROOF // recycling partner's proof of pickup
+}
+
+enum CleanupStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VerificationResult {
+  VERIFIED
+  DISPUTED
+}
+
+// Recycling-partner side status, separate from the report's main status.
+enum RecyclingStatus {
+  ROUTED
+  COLLECTED
+  CANCELLED
+}
+
+// Every value here is a status change the CITIZEN who filed the report cares
+// about. Workers/authority never receive a Notification row — they use their
+// own dashboards/queues instead.
+enum NotificationType {
+  REPORT_ASSIGNED
+  REPORT_IN_PROGRESS
+  REPORT_CLEANUP_COMPLETED
+  REPORT_RESOLVED
+  REPORT_VERIFIED
+  REPORT_DISPUTED
+}
+
+// -------------------------
+// PROFILE
+// -------------------------
+
+model Profile {
+  id               String  @id @db.Uuid
+  role             Role    @default(CITIZEN)
+  name             String?
+  email            String?
+  permanentAddress String?
+
+  // WORKER-only: city + specific area/locality allocated to them.
+  city String?
+  area String?
+
+  // RECYCLING_PARTNER-only: which partner org this login belongs to.
+  recyclingPartnerId  String?           @db.Uuid
+  recyclingPartnerOrg RecyclingPartner? @relation(fields: [recyclingPartnerId], references: [id])
+
+  isBlocked   Boolean @default(false)
+  blockReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports        Report[]             @relation("CitizenReports")
+  uploadedImages ReportImage[]
+  verifications  ReportVerification[]
+  notifications  Notification[] // citizen only, in practice
+
+  assignedCleanups Cleanup[] @relation("AuthorityAssignments")
+  cleanupsDone     Cleanup[] @relation("WorkerCleanups")
+
+  @@index([role])
+  @@index([city, area])
+  @@index([recyclingPartnerId])
+  @@map("profiles")
+}
+
+// -------------------------
+// REPORT (citizen submits media + location — everything else is AI-filled)
+// -------------------------
+
+model Report {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  // ---- citizen input only ----
+  description String?
+  location    Unsupported("extensions.geography(Point, 4326)")
+
+  // ---- AI-generated fields — no human enters these ----
+  dumpType              DumpType?
+  wasteCategory         WasteCategory?
+  wasteVolume           WasteVolume?
+  truckSize             TruckSize?
+  workersNeeded         Int?
+  recommendedAction     InterventionType?
+  attention             AttentionLevel    @default(NORMAL)
+  nearSensitiveLocation Boolean           @default(false)
+  severityScore         Float?
+  aiConfidence          Float?
+  aiProcessedAt         DateTime?
+
+  duplicateOfId String?  @db.Uuid
+  duplicateOf   Report?  @relation("Duplicates", fields: [duplicateOfId], references: [id])
+  duplicates    Report[] @relation("Duplicates")
+
+  // ---- recycling partner routing ----
+  recyclingPartnerId   String?           @db.Uuid
+  recyclingPartner     RecyclingPartner? @relation(fields: [recyclingPartnerId], references: [id])
+  recyclingStatus      RecyclingStatus?
+  routedToRecyclingAt  DateTime?
+  recyclingCollectedAt DateTime?
+
+  status ReportStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  user Profile @relation("CitizenReports", fields: [userId], references: [id], onDelete: Cascade)
+
+  images        ReportImage[]
+  cleanup       Cleanup?
+  verification  ReportVerification?
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([dumpType])
+  @@index([wasteCategory])
+  @@index([attention])
+  @@index([recyclingPartnerId])
+  @@index([createdAt])
+  @@map("reports")
+}
+
+// -------------------------
+// REPORT MEDIA (citizen photo/video + worker before/after + partner proof)
+// -------------------------
+
+model ReportImage {
+  id         String @id @default(uuid()) @db.Uuid
+  reportId   String @db.Uuid
+  uploadedBy String @db.Uuid
+
+  storagePath String
+  mediaType   MediaType       @default(PHOTO)
+  type        ReportImageType @default(REPORT)
+
+  createdAt DateTime @default(now())
+
+  report   Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  uploader Profile @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  cleanupBeforeOf Cleanup? @relation("BeforeImage")
+  cleanupAfterOf  Cleanup? @relation("AfterImage")
+
+  @@index([reportId])
+  @@index([uploadedBy])
+  @@index([type])
+  @@map("report_images")
+}
+
+// -------------------------
+// RECYCLING PARTNER (its own logged-in org — routing target for reports)
+// -------------------------
+
+model RecyclingPartner {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String
+  contactPhone String?
+  contactEmail String?
+
+  city               String?
+  area               String?
+  acceptedCategories WasteCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff   Profile[] // partner org's own users (role=RECYCLING_PARTNER)
+  reports Report[]
+
+  @@index([city, area])
+  @@map("recycling_partners")
+}
+
+// -------------------------
+// CLEANUP (authority assigns worker -> worker executes)
+// -------------------------
+
+model Cleanup {
+  id String @id @default(uuid()) @db.Uuid
+
+  reportId   String @unique @db.Uuid
+  workerId   String @db.Uuid
+  assignedBy String @db.Uuid
+
+  status CleanupStatus @default(ASSIGNED)
+
+  beforeImageId String? @unique @db.Uuid
+  afterImageId  String? @unique @db.Uuid
+
+  assignedAt  DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  report        Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  worker        Profile @relation("WorkerCleanups", fields: [workerId], references: [id])
+  assignedByRef Profile @relation("AuthorityAssignments", fields: [assignedBy], references: [id])
+
+  beforeImage ReportImage? @relation("BeforeImage", fields: [beforeImageId], references: [id])
+  afterImage  ReportImage? @relation("AfterImage", fields: [afterImageId], references: [id])
+
+  @@index([workerId])
+  @@index([assignedBy])
+  @@index([status])
+  @@map("cleanups")
+}
+
+// -------------------------
+// CITIZEN FINAL VERIFICATION
+// -------------------------
+
+model ReportVerification {
+  id String @id @default(uuid()) @db.Uuid
+
+  reportId String @unique @db.Uuid
+  userId   String @db.Uuid
+
+  result  VerificationResult
+  comment String?
+
+  createdAt DateTime @default(now())
+
+  report Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("report_verifications")
+}
+
+// -------------------------
+// NOTIFICATIONS (citizen-facing only)
+// -------------------------
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId   String @db.Uuid // always the citizen who filed the report
+  reportId String @db.Uuid
+
+  type    NotificationType
+  title   String
+  message String?
+  isRead  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([reportId])
+  @@map("notifications")
 }
