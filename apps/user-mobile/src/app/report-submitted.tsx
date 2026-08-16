@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReportSubmittedScreen() {
   const router = useRouter();
@@ -8,7 +9,7 @@ export default function ReportSubmittedScreen() {
   const reportId = id || '#1035';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.content}>
         {/* Big Green Check Badge */}

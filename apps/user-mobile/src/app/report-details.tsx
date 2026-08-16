@@ -7,11 +7,13 @@ import {
   TextInput,
   Pressable,
   Image,
-  SafeAreaView,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCitizenStore, WasteCategory } from '@/store/citizen-store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WASTE_TYPES: WasteCategory[] = [
   'Mixed Waste',
@@ -51,10 +53,13 @@ export default function ReportDetailsScreen() {
     }, 500);
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
+  return ( 
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -141,7 +146,8 @@ export default function ReportDetailsScreen() {
             {isSubmitting ? 'Submitting...' : 'Submit Report'}
           </Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

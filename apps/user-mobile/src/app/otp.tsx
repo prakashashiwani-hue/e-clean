@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OtpScreen() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function OtpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.content}>
         {/* Shield Check Badge */}

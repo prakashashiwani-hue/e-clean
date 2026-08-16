@@ -4,11 +4,13 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useLittererStore, LittererGender } from '@/store/litterer-store';
 
@@ -40,9 +42,12 @@ export default function DetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.container}>
         {/* Header */}
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -166,7 +171,8 @@ export default function DetailsScreen() {
             <Text style={styles.nextBtnText}>Next</Text>
           </Pressable>
         </View>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCitizenStore } from '@/store/citizen-store';
 
@@ -49,7 +49,7 @@ export default function ReportTrackingScreen() {
       : 'Your report has been received and is being processed.';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}

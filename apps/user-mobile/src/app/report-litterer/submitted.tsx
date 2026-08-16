@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function LittererSubmittedScreen() {
@@ -37,7 +37,7 @@ export default function LittererSubmittedScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
 
       <View style={styles.content}>

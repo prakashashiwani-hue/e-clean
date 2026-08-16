@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, Pressable } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useLittererStore } from '@/store/litterer-store';
 
@@ -19,7 +20,7 @@ export default function ReviewScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.container}>
         {/* Header */}

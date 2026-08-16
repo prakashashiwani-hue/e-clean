@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCitizenStore, ReportStatus } from '@/store/citizen-store';
 
@@ -24,7 +24,7 @@ export default function MyReportsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.container}>
         {/* Top Header */}

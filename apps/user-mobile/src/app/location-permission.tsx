@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LocationPermissionScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function LocationPermissionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.content}>
         {/* Map Vector Pin */}

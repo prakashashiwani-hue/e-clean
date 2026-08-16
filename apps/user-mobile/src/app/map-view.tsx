@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MapViewScreen() {
   const router = useRouter();
   const [selectedCluster, setSelectedCluster] = useState<string | null>('23');
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       {/* Header */}
       <View style={styles.headerRow}>

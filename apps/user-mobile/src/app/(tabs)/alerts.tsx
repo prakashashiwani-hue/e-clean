@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCitizenStore } from '@/store/citizen-store';
 
 export default function AlertsScreen() {
@@ -20,7 +20,7 @@ export default function AlertsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <View style={styles.container}>
         {/* Header */}

@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCitizenStore } from '@/store/citizen-store';
 
@@ -23,15 +23,19 @@ export default function HomeDashboard() {
   const totalCount = reports.length;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Top Header */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greetingTitle}>Hello, {profile.name.split(' ')[0]} 👋</Text>
-            <Text style={styles.greetingSub}>Let's keep our city clean!</Text>
+        {/* Brand & Profile Top Header */}
+        <View style={styles.topBrandingRow}>
+          <View style={styles.brandContainer}>
+            <Image
+              source={require('../../../assets/logo/e-clean.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandTitle}>e-Clean</Text>
           </View>
 
           <Pressable style={styles.avatarBtn} onPress={() => router.push('/(tabs)/profile')}>
@@ -39,6 +43,12 @@ export default function HomeDashboard() {
             {/* Unread notification dot */}
             <View style={styles.notifDot} />
           </Pressable>
+        </View>
+
+        {/* Greeting */}
+        <View style={styles.greetingRow}>
+          <Text style={styles.greetingTitle}>Hello, {profile.name.split(' ')[0]} 👋</Text>
+          <Text style={styles.greetingSub}>Let's keep our city clean!</Text>
         </View>
 
         {/* Report Waste Banner Card */}
@@ -163,15 +173,36 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  // Header
-  headerRow: {
+  // Header & Brand
+  topBrandingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
+    paddingTop: 4,
+  },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+  },
+  brandTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#2E7D4F',
+    fontFamily: 'Sora',
+    letterSpacing: -0.5,
+  },
+  greetingRow: {
     marginBottom: 20,
   },
   greetingTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#23302A',
     fontFamily: 'Sora',

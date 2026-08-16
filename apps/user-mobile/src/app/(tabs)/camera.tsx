@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCitizenStore } from '@/store/citizen-store';
 
@@ -26,7 +27,7 @@ export default function CameraCaptureScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       {/* Dark Viewfinder */}

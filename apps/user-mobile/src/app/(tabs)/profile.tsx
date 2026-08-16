@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCitizenStore } from '@/store/citizen-store';
 
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}

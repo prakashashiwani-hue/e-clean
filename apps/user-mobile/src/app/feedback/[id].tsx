@@ -6,9 +6,11 @@ import {
   ScrollView,
   TextInput,
   Pressable,
-  SafeAreaView,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCitizenStore } from '@/store/citizen-store';
 
@@ -31,9 +33,12 @@ export default function FeedbackScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBF8" />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -82,7 +87,8 @@ export default function FeedbackScreen() {
             {submitted ? 'Thank You for Rating! ✓' : 'Submit Feedback'}
           </Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
