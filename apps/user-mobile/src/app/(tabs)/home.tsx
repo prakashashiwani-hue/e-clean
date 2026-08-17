@@ -14,13 +14,15 @@ import { useCitizenStore } from '@/store/citizen-store';
 
 export default function HomeDashboard() {
   const router = useRouter();
-  const { profile, reports } = useCitizenStore();
+  const { profile, reports, notifications } = useCitizenStore();
 
   const resolvedCount = reports.filter((r) => r.status === 'Resolved').length;
   const inProgressCount = reports.filter(
     (r) => r.status === 'In Progress' || r.status === 'Under Review' || r.status === 'Assigned to Team'
   ).length;
   const totalCount = reports.length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const firstName = profile.name ? profile.name.split(' ')[0] : 'there';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -39,15 +41,21 @@ export default function HomeDashboard() {
           </View>
 
           <Pressable style={styles.avatarBtn} onPress={() => router.push('/(tabs)/profile')}>
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+            {profile.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>👤</Text>
+              </View>
+            )}
             {/* Unread notification dot */}
-            <View style={styles.notifDot} />
+            {unreadCount > 0 && <View style={styles.notifDot} />}
           </Pressable>
         </View>
 
         {/* Greeting */}
         <View style={styles.greetingRow}>
-          <Text style={styles.greetingTitle}>Hello, {profile.name.split(' ')[0]} 👋</Text>
+          <Text style={styles.greetingTitle}>Hello, {firstName} 👋</Text>
           <Text style={styles.greetingSub}>Let's keep our city clean!</Text>
         </View>
 
@@ -221,11 +229,24 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2E7D4F',
     position: 'relative',
+    backgroundColor: '#E8F0E5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarImg: {
     width: '100%',
     height: '100%',
     borderRadius: 22,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: {
+    fontSize: 20,
   },
   notifDot: {
     position: 'absolute',

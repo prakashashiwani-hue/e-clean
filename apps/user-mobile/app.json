@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "user-mobile",
-    "slug": "user-mobile",
+    "name": "e-clean",
+    "slug": "e-clean",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo/e-clean.png",
-    "scheme": "usermobile",
+    "scheme": "eclean",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/logo/e-clean.png"
@@ -104,7 +104,10 @@
           "enableBackgroundRemoteNotifications": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-audio",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -113,7 +116,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a55c6495-c90d-45ae-8677-1b84fe859d85"
+        "projectId": "8c66dea9-2749-4f28-87cc-96429e5d0a91"
       }
     }
   }

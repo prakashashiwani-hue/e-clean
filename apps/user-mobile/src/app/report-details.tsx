@@ -10,10 +10,13 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCitizenStore, WasteCategory } from '@/store/citizen-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { uploadPhotos } from '@/lib/upload';
 
 const WASTE_TYPES: WasteCategory[] = [
   'Mixed Waste',
@@ -26,31 +29,54 @@ const WASTE_TYPES: WasteCategory[] = [
 
 export default function ReportDetailsScreen() {
   const router = useRouter();
-  const { draftReport, createNewReport } = useCitizenStore();
+  const { draftReport, createNewReport, updateDraftReport } = useCitizenStore();
   const [wasteType, setWasteType] = useState<WasteCategory>('Mixed Waste');
-  const [description, setDescription] = useState('Garbage dumped on roadside near the park.');
+  const [description, setDescription] = useState('');
   const [isYourArea, setIsYourArea] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const photos = draftReport.photos || [
-    'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1604186837056-8e7c286756f2?auto=format&fit=crop&w=300&q=80',
-  ];
+  const photos = draftReport.photos ?? [];
+  const location =
+    draftReport.location ||
+    (draftReport.lat && draftReport.lng
+      ? `${draftReport.lat.toFixed(4)}, ${draftReport.lng.toFixed(4)}`
+      : 'Not set');
 
-  const handleSubmit = () => {
+  const handleAddPhoto = () => {
+    router.push('/(tabs)/camera');
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    updateDraftReport({ photos: photos.filter((_, i) => i !== index) });
+  };
+
+  const handleSubmit = async () => {
+    if (photos.length === 0) {
+      Alert.alert('Photo required', 'Please capture at least one photo of the waste.');
+      return;
+    }
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      let uploaded: string[] = photos;
+      try {
+        uploaded = await uploadPhotos(photos);
+      } catch {
+        // S3 not configured on the API — fall back to local/remote URIs so
+        // the report flow still works end-to-end.
+        uploaded = photos;
+      }
       const report = createNewReport({
         wasteType,
-        description,
-        photos,
-        location: draftReport.location || 'Sector 21, Rourkela, Odisha',
+        description: description.trim() || 'No description provided.',
+        photos: uploaded,
+        location,
       });
-      setIsSubmitting(false);
-      // Navigate to Screen 9: Report Submitted
       router.push(`/report-submitted?id=${encodeURIComponent(report.id)}`);
-    }, 500);
+    } catch {
+      Alert.alert('Submission Failed', 'Could not submit the report. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return ( 
@@ -100,14 +126,25 @@ export default function ReportDetailsScreen() {
           placeholderTextColor="#6B7A70"
         />
 
-        {/* Photos Grid (3/5) */}
+        {/* Photos Grid (x/5) */}
         <Text style={styles.label}>Photos ({photos.length}/5)</Text>
         <View style={styles.photosGrid}>
           {photos.map((uri, idx) => (
-            <Image key={idx} source={{ uri }} style={styles.photoThumb} />
+            <View key={`${uri}-${idx}`} style={styles.photoThumbWrap}>
+              <Image source={{ uri }} style={styles.photoThumb} />
+              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(idx)}>
+                <Text style={styles.photoRemoveText}>✕</Text>
+              </Pressable>
+            </View>
           ))}
-          {photos.length < 5 && (
-            <Pressable style={styles.addPhotoBtn}>
+          {photos.length === 0 && (
+            <Pressable style={styles.emptyPhotos} onPress={handleAddPhoto}>
+              <Text style={styles.emptyPhotosIcon}>📷</Text>
+              <Text style={styles.emptyPhotosText}>Captured nothing yet — take a photo first</Text>
+            </Pressable>
+          )}
+          {photos.length > 0 && photos.length < 5 && (
+            <Pressable style={styles.addPhotoBtn} onPress={handleAddPhoto}>
               <Text style={styles.addPhotoText}>+</Text>
             </Pressable>
           )}
@@ -116,9 +153,9 @@ export default function ReportDetailsScreen() {
         {/* Exact Location */}
         <Text style={styles.label}>Exact Location</Text>
         <View style={styles.locationBox}>
-          <Text style={styles.locationText}>{draftReport.location || 'Sector 21, Rourkela, Odisha'}</Text>
-          <Pressable>
-            <Text style={styles.changeText}>Change</Text>
+          <Text style={styles.locationText}>{location}</Text>
+          <Pressable onPress={handleAddPhoto}>
+            <Text style={styles.changeText}>Update</Text>
           </Pressable>
         </View>
 
@@ -142,9 +179,11 @@ export default function ReportDetailsScreen() {
           style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting}>
-          <Text style={styles.submitBtnText}>
-            {isSubmitting ? 'Submitting...' : 'Submit Report'}
-          </Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="#FCFEFA" />
+          ) : (
+            <Text style={styles.submitBtnText}>Submit Report</Text>
+          )}
         </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -246,11 +285,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  photoThumbWrap: {
+    position: 'relative',
   },
   photoThumb: {
     width: 64,
     height: 64,
     borderRadius: 12,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#D64545',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FAFBF8',
+  },
+  photoRemoveText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  emptyPhotos: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#F5F8F3',
+    borderWidth: 1.5,
+    borderColor: '#DCE3D8',
+    borderStyle: 'dashed',
+    padding: 18,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyPhotosIcon: {
+    fontSize: 24,
+  },
+  emptyPhotosText: {
+    fontSize: 12,
+    color: '#6B7A70',
+    fontWeight: '600',
+    fontFamily: 'Plus Jakarta Sans',
+    textAlign: 'center',
   },
   addPhotoBtn: {
     width: 64,

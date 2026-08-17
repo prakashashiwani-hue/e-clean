@@ -83,6 +83,9 @@ export default function AnimatedSplashScreen() {
   // Ambient rotating background pattern
   const ambientRotation = useSharedValue(0);
 
+  // Soft breathing glow behind the central stage
+  const glowPulse = useSharedValue(0.55);
+
   const navigateToApp = () => {
     router.replace('/onboarding');
   };
@@ -118,6 +121,16 @@ export default function AnimatedSplashScreen() {
       // 0. Ambient slow background grid rotation
       ambientRotation.value = withRepeat(
         withTiming(360, { duration: 40000, easing: Easing.linear }),
+        -1,
+        false
+      );
+
+      // Soft breathing glow behind the pin/leaf stage
+      glowPulse.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.55, { duration: 1800, easing: Easing.inOut(Easing.quad) })
+        ),
         -1,
         false
       );
@@ -250,6 +263,11 @@ export default function AnimatedSplashScreen() {
     ],
   }));
 
+  const animatedGlowStyle = useAnimatedStyle(() => ({
+    opacity: glowPulse.value,
+    transform: [{ scale: 0.9 + glowPulse.value * 0.18 }],
+  }));
+
   const animatedDotStyle = useAnimatedStyle(() => ({
     opacity: dotOpacity.value,
     transform: [{ scale: dotScale.value }],
@@ -353,16 +371,18 @@ export default function AnimatedSplashScreen() {
         <View style={styles.centralStage}>
 
           {/* Environmental Radial Glow Background */}
-          <Svg width="220" height="220" viewBox="0 0 220 220" style={styles.radialGlow}>
-            <Defs>
-              <RadialGradient id="ecoGlow" cx="50%" cy="50%" rx="50%" ry="50%">
-                <Stop offset="0%" stopColor="#34D399" stopOpacity="0.18" />
-                <Stop offset="45%" stopColor="#10B981" stopOpacity="0.06" />
-                <Stop offset="100%" stopColor="#FAFBF7" stopOpacity="0" />
-              </RadialGradient>
-            </Defs>
-            <Circle cx="110" cy="110" r="110" fill="url(#ecoGlow)" />
-          </Svg>
+          <Animated.View style={[styles.radialGlow, animatedGlowStyle]}>
+            <Svg width="220" height="220" viewBox="0 0 220 220">
+              <Defs>
+                <RadialGradient id="ecoGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+                  <Stop offset="0%" stopColor="#34D399" stopOpacity="0.18" />
+                  <Stop offset="45%" stopColor="#10B981" stopOpacity="0.06" />
+                  <Stop offset="100%" stopColor="#FAFBF7" stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              <Circle cx="110" cy="110" r="110" fill="url(#ecoGlow)" />
+            </Svg>
+          </Animated.View>
 
           {/* Phase 1: Outward Network Ripples */}
           <Animated.View style={[styles.rippleCircle, animatedRippleStyle]} />

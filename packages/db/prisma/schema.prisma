@@ -20,6 +20,7 @@ enum Role {
 
 // AI_ASSESSED fires automatically once the AI pipeline finishes on the image.
 // No human "assessment" step exists.
+
 enum ReportStatus {
   PENDING // citizen submitted, AI pipeline running
   AI_ASSESSED // AI filled dumpType/wasteCategory/volume/truckSize/recommendedAction
@@ -74,6 +75,7 @@ enum TruckSize {
 }
 
 // What the authority dashboard shows as the AI's recommended intervention.
+
 enum InterventionType {
   MANUAL_CLEANUP // small litter -> manual team, no truck
   WORKER_TRUCK_DISPATCH // large pile -> extra workers + truck
@@ -106,6 +108,7 @@ enum VerificationResult {
 }
 
 // Recycling-partner side status, separate from the report's main status.
+
 enum RecyclingStatus {
   ROUTED
   COLLECTED
@@ -115,6 +118,7 @@ enum RecyclingStatus {
 // Every value here is a status change the CITIZEN who filed the report cares
 // about. Workers/authority never receive a Notification row — they use their
 // own dashboards/queues instead.
+
 enum NotificationType {
   REPORT_ASSIGNED
   REPORT_IN_PROGRESS
@@ -125,42 +129,80 @@ enum NotificationType {
 }
 
 // -------------------------
-// PROFILE
+// BETTER AUTH CORE TABLES
+// (generated shape — do not hand-edit id types unless you also
+// update your Better Auth server config to match)
 // -------------------------
 
-model Profile {
-  id               String  @id @db.Uuid
-  role             Role    @default(CITIZEN)
-  name             String?
-  email            String?
-  permanentAddress String?
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  // WORKER-only: city + specific area/locality allocated to them.
-  city String?
-  area String?
+  sessions Session[]
+  accounts Account[]
 
-  // RECYCLING_PARTNER-only: which partner org this login belongs to.
-  recyclingPartnerId  String?           @db.Uuid
-  recyclingPartnerOrg RecyclingPartner? @relation(fields: [recyclingPartnerId], references: [id])
-
-  isBlocked   Boolean @default(false)
-  blockReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  reports        Report[]             @relation("CitizenReports")
-  uploadedImages ReportImage[]
-  verifications  ReportVerification[]
-  notifications  Notification[] // citizen only, in practice
-
+  reports          Report[]
+  uploadedImages   ReportImage[]
+  verifications    ReportVerification[]
+  notifications    Notification[]
   assignedCleanups Cleanup[] @relation("AuthorityAssignments")
   cleanupsDone     Cleanup[] @relation("WorkerCleanups")
 
-  @@index([role])
-  @@index([city, area])
-  @@index([recyclingPartnerId])
-  @@map("profiles")
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
 
 // -------------------------
@@ -168,12 +210,12 @@ model Profile {
 // -------------------------
 
 model Report {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
+  id     String @id @default(uuid())
+  userId String
 
   // ---- citizen input only ----
   description String?
-  location    Unsupported("extensions.geography(Point, 4326)")
+  location    Unsupported("geography(Point, 4326)")
 
   // ---- AI-generated fields — no human enters these ----
   dumpType              DumpType?
@@ -188,12 +230,12 @@ model Report {
   aiConfidence          Float?
   aiProcessedAt         DateTime?
 
-  duplicateOfId String?  @db.Uuid
+  duplicateOfId String?
   duplicateOf   Report?  @relation("Duplicates", fields: [duplicateOfId], references: [id])
   duplicates    Report[] @relation("Duplicates")
 
   // ---- recycling partner routing ----
-  recyclingPartnerId   String?           @db.Uuid
+  recyclingPartnerId   String?
   recyclingPartner     RecyclingPartner? @relation(fields: [recyclingPartnerId], references: [id])
   recyclingStatus      RecyclingStatus?
   routedToRecyclingAt  DateTime?
@@ -205,7 +247,7 @@ model Report {
   updatedAt  DateTime  @updatedAt
   resolvedAt DateTime?
 
-  user Profile @relation("CitizenReports", fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   images        ReportImage[]
   cleanup       Cleanup?
@@ -227,9 +269,9 @@ model Report {
 // -------------------------
 
 model ReportImage {
-  id         String @id @default(uuid()) @db.Uuid
-  reportId   String @db.Uuid
-  uploadedBy String @db.Uuid
+  id         String @id @default(uuid())
+  reportId   String
+  uploadedBy String
 
   storagePath String
   mediaType   MediaType       @default(PHOTO)
@@ -237,8 +279,8 @@ model ReportImage {
 
   createdAt DateTime @default(now())
 
-  report   Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  uploader Profile @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  report   Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  uploader User   @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   cleanupBeforeOf Cleanup? @relation("BeforeImage")
   cleanupAfterOf  Cleanup? @relation("AfterImage")
@@ -254,7 +296,7 @@ model ReportImage {
 // -------------------------
 
 model RecyclingPartner {
-  id           String  @id @default(uuid()) @db.Uuid
+  id           String  @id @default(uuid())
   name         String
   contactPhone String?
   contactEmail String?
@@ -266,7 +308,6 @@ model RecyclingPartner {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  staff   Profile[] // partner org's own users (role=RECYCLING_PARTNER)
   reports Report[]
 
   @@index([city, area])
@@ -278,24 +319,24 @@ model RecyclingPartner {
 // -------------------------
 
 model Cleanup {
-  id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid())
 
-  reportId   String @unique @db.Uuid
-  workerId   String @db.Uuid
-  assignedBy String @db.Uuid
+  reportId   String @unique
+  workerId   String
+  assignedBy String
 
   status CleanupStatus @default(ASSIGNED)
 
-  beforeImageId String? @unique @db.Uuid
-  afterImageId  String? @unique @db.Uuid
+  beforeImageId String? @unique
+  afterImageId  String? @unique
 
   assignedAt  DateTime  @default(now())
   startedAt   DateTime?
   completedAt DateTime?
 
-  report        Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  worker        Profile @relation("WorkerCleanups", fields: [workerId], references: [id])
-  assignedByRef Profile @relation("AuthorityAssignments", fields: [assignedBy], references: [id])
+  report        Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  worker        User   @relation("WorkerCleanups", fields: [workerId], references: [id])
+  assignedByRef User   @relation("AuthorityAssignments", fields: [assignedBy], references: [id])
 
   beforeImage ReportImage? @relation("BeforeImage", fields: [beforeImageId], references: [id])
   afterImage  ReportImage? @relation("AfterImage", fields: [afterImageId], references: [id])
@@ -311,18 +352,18 @@ model Cleanup {
 // -------------------------
 
 model ReportVerification {
-  id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid())
 
-  reportId String @unique @db.Uuid
-  userId   String @db.Uuid
+  reportId String @unique
+  userId   String
 
   result  VerificationResult
   comment String?
 
   createdAt DateTime @default(now())
 
-  report Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("report_verifications")
@@ -333,10 +374,10 @@ model ReportVerification {
 // -------------------------
 
 model Notification {
-  id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid())
 
-  userId   String @db.Uuid // always the citizen who filed the report
-  reportId String @db.Uuid
+  userId   String // always the citizen who filed the report
+  reportId String
 
   type    NotificationType
   title   String
@@ -345,8 +386,8 @@ model Notification {
 
   createdAt DateTime @default(now())
 
-  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
-  report Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([reportId])

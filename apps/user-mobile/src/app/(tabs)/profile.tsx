@@ -16,6 +16,15 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { profile } = useCitizenStore();
 
+  const displayName = profile.name || 'Citizen';
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   const menuItems = [
     { title: 'My Reports', icon: '📋', route: '/(tabs)/my-reports' },
     { title: 'Saved Locations', icon: '📍', route: '/map-view' },
@@ -36,11 +45,22 @@ export default function ProfileScreen() {
 
         {/* User Card Header */}
         <View style={styles.userCard}>
-          <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+          {profile.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
           <View style={styles.userMeta}>
-            <Text style={styles.userName}>{profile.name}</Text>
-            <Text style={styles.userPhone}>{profile.phone}</Text>
-            <Text style={styles.userCity}>{profile.sector}</Text>
+            <Text style={styles.userName}>{displayName}</Text>
+            {profile.email ? (
+              <Text style={styles.userPhone}>{profile.email}</Text>
+            ) : null}
+            {profile.phone ? (
+              <Text style={[styles.userPhone, { marginTop: 2 }]}>{profile.phone}</Text>
+            ) : null}
+            <Text style={styles.userCity}>{profile.sector || 'Citizen'}</Text>
           </View>
         </View>
 
@@ -104,6 +124,17 @@ const styles = StyleSheet.create({
     marginRight: 16,
     borderWidth: 2,
     borderColor: '#2E7D4F',
+  },
+  avatarFallback: {
+    backgroundColor: '#E8F0E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2E7D4F',
+    fontFamily: 'Sora',
   },
   userMeta: {
     flex: 1,

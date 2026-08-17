@@ -1,4 +1,4 @@
-# api
+# auth
 
 To install dependencies:
 

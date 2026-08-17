@@ -9,20 +9,82 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { signIn, signUp } from '../lib/auth-client';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<'login' | 'register'>('login');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [password, setPassword] = useState('••••••••');
 
-  const handleSubmit = () => {
-    // Navigate to OTP verification screen
-    router.push('/otp');
+  // Shared fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Register-only fields
+  const [name, setName] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: authError } = await signIn.email({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (authError) {
+        setError(authError.message ?? 'Login failed. Please try again.');
+      } else {
+        router.replace('/(tabs)/home');
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleRegister = async () => {
+    if (!name || !email || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: authError } = await signUp.email({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (authError) {
+        setError(authError.message ?? 'Registration failed. Please try again.');
+      } else {
+        // Signed up & session created — go to app
+        router.replace('/(tabs)/home');
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = tab === 'login' ? handleLogin : handleRegister;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
@@ -31,77 +93,100 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>Login to continue reporting civic issues</Text>
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {tab === 'login' ? 'Welcome Back!' : 'Create Account'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {tab === 'login'
+                ? 'Login to continue reporting civic issues'
+                : 'Join e-clean and make a difference'}
+            </Text>
+          </View>
 
-        {/* Tab Switcher */}
-        <View style={styles.tabBar}>
+          {/* Tab Switcher */}
+          <View style={styles.tabBar}>
+            <Pressable
+              style={[styles.tabItem, tab === 'login' && styles.tabItemActive]}
+              onPress={() => { setTab('login'); setError(null); }}>
+              <Text style={[styles.tabText, tab === 'login' && styles.tabTextActive]}>Login</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tabItem, tab === 'register' && styles.tabItemActive]}
+              onPress={() => { setTab('register'); setError(null); }}>
+              <Text style={[styles.tabText, tab === 'register' && styles.tabTextActive]}>Register</Text>
+            </Pressable>
+          </View>
+
+          {/* Input Fields */}
+          <View style={styles.formGroup}>
+            {tab === 'register' && (
+              <>
+                <Text style={styles.fieldLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ananya Sharma"
+                  placeholderTextColor="#6B7A70"
+                  autoCapitalize="words"
+                  textContentType="name"
+                />
+              </>
+            )}
+
+            <Text style={styles.fieldLabel}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor="#6B7A70"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+            />
+
+            <Text style={styles.fieldLabel}>Password</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor="#6B7A70"
+              textContentType={tab === 'login' ? 'password' : 'newPassword'}
+            />
+
+            {tab === 'login' && (
+              <Pressable style={styles.forgotBtn}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Error Message */}
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Action Button */}
           <Pressable
-            style={[styles.tabItem, tab === 'login' && styles.tabItemActive]}
-            onPress={() => setTab('login')}>
-            <Text style={[styles.tabText, tab === 'login' && styles.tabTextActive]}>Login</Text>
+            style={[styles.loginBtn, loading && { opacity: 0.7 }]}
+            onPress={handleSubmit}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FCFEFA" />
+            ) : (
+              <Text style={styles.loginBtnText}>
+                {tab === 'login' ? 'Login' : 'Create Account'}
+              </Text>
+            )}
           </Pressable>
-          <Pressable
-            style={[styles.tabItem, tab === 'register' && styles.tabItemActive]}
-            onPress={() => setTab('register')}>
-            <Text style={[styles.tabText, tab === 'register' && styles.tabTextActive]}>Register</Text>
-          </Pressable>
-        </View>
-
-        {/* Input Fields */}
-        <View style={styles.formGroup}>
-          <Text style={styles.fieldLabel}>Mobile Number</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholder="+91 98765 43210"
-            placeholderTextColor="#6B7A70"
-          />
-
-          <Text style={styles.fieldLabel}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor="#6B7A70"
-          />
-
-          <Pressable style={styles.forgotBtn}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </Pressable>
-        </View>
-
-        {/* Action Button */}
-        <Pressable style={styles.loginBtn} onPress={handleSubmit}>
-          <Text style={styles.loginBtnText}>{tab === 'login' ? 'Login' : 'Send OTP Register'}</Text>
-        </Pressable>
-
-        {/* Social Auth Divider */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Social Login Buttons */}
-        <View style={styles.socialRow}>
-          <Pressable style={styles.socialBtn} onPress={handleSubmit}>
-            <Text style={styles.socialIcon}>G</Text>
-          </Pressable>
-          <Pressable style={styles.socialBtn} onPress={handleSubmit}>
-            <Text style={styles.socialIcon}></Text>
-          </Pressable>
-          <Pressable style={styles.socialBtn} onPress={handleSubmit}>
-            <Text style={styles.socialIcon}>📱</Text>
-          </Pressable>
-        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -197,6 +282,21 @@ const styles = StyleSheet.create({
     color: '#2E7D4F',
     fontFamily: 'Plus Jakarta Sans',
   },
+  errorBox: {
+    backgroundColor: '#FFF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#C62828',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Plus Jakarta Sans',
+  },
   loginBtn: {
     backgroundColor: '#2E7D4F',
     paddingVertical: 16,
@@ -214,41 +314,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     fontFamily: 'Sora',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DCE3D8',
-  },
-  dividerText: {
-    fontSize: 12,
-    color: '#6B7A70',
-    fontFamily: 'Plus Jakarta Sans',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DCE3D8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  socialIcon: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#23302A',
   },
 });

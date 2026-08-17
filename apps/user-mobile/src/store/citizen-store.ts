@@ -47,6 +47,8 @@ export interface DraftReport {
   description?: string;
   photos?: string[];
   location?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Notification {
@@ -60,6 +62,7 @@ export interface Notification {
 
 export interface UserProfile {
   name: string;
+  email?: string;
   phone: string;
   sector: string;
   avatarUrl: string;
@@ -74,19 +77,13 @@ interface CitizenState {
 
 let state: CitizenState = {
   profile: {
-    name: 'Ananya Sharma',
-    phone: '+91 98765 43210',
-    sector: 'Sector 21, Rourkela',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+    name: '',
+    email: undefined,
+    phone: '',
+    sector: '',
+    avatarUrl: '',
   },
-  draftReport: {
-    photos: [
-      'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1604186837056-8e7c286756f2?auto=format&fit=crop&w=300&q=80',
-    ],
-    location: 'Sector 21, Rourkela, Odisha',
-  },
+  draftReport: {},
   notifications: [
     {
       id: '1',
@@ -203,6 +200,12 @@ export function useCitizenStore() {
 
   return {
     ...current,
+    setProfile: (profile: Partial<UserProfile>) => {
+      setState((prev) => ({
+        ...prev,
+        profile: { ...prev.profile, ...profile },
+      }));
+    },
     updateDraftReport: (draft: Partial<DraftReport>) => {
       setState((prev) => ({
         ...prev,

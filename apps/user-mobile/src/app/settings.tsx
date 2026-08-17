@@ -11,19 +11,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { signOut } from '../lib/auth-client';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [cacheSize, setCacheSize] = useState('24.6 MB');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleClearCache = () => {
     setCacheSize('0.0 MB');
     Alert.alert('Cache Cleared', 'Application cache cleared successfully.');
   };
 
-  const handleLogout = () => {
-    router.replace('/login');
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          setLoggingOut(true);
+          try {
+            await signOut();
+            router.replace('/login');
+          } finally {
+            setLoggingOut(false);
+          }
+        },
+      },
+    ]);
   };
 
   return (
