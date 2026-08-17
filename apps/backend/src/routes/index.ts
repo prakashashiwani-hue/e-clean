@@ -1,8 +1,6 @@
 import { Router } from "express";
 import { healthRouter } from "./health.routes";
 import { userRouter } from "./user.routes";
-import { reportRouter } from "./report.routes";
-import { uploadRouter } from "./upload.routes";
 
 const apiRouter = Router();
 
@@ -10,7 +8,5 @@ const apiRouter = Router();
 // app.ts before express.json() so its body streaming works correctly.
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/users", userRouter);
-apiRouter.use("/reports", reportRouter);
-apiRouter.use("/upload", uploadRouter);
 
 export { apiRouter };

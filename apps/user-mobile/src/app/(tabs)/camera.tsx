@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useCitizenStore } from '@/store/citizen-store';
 
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 2;
 
 export default function CameraCaptureScreen() {
   const router = useRouter();

@@ -60,7 +60,9 @@ export async function uploadToS3(
  * not configured on the API — callers may fall back to the original URIs.
  */
 export async function uploadPhotos(photoUris: string[]): Promise<string[]> {
-  const local = photoUris.filter((u) => !/^https?:\/\//.test(u));
+  const local = photoUris
+    .filter((u) => !/^https?:\/\//.test(u))
+    .slice(0, 2);
   if (local.length === 0) return photoUris;
 
   const presigned = await requestPresignedUploads({

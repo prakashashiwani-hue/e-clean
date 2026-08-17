@@ -126,8 +126,8 @@ export default function ReportDetailsScreen() {
           placeholderTextColor="#6B7A70"
         />
 
-        {/* Photos Grid (x/5) */}
-        <Text style={styles.label}>Photos ({photos.length}/5)</Text>
+        {/* Photos Grid (x/2) */}
+        <Text style={styles.label}>Photos ({photos.length}/2)</Text>
         <View style={styles.photosGrid}>
           {photos.map((uri, idx) => (
             <View key={`${uri}-${idx}`} style={styles.photoThumbWrap}>
@@ -143,7 +143,7 @@ export default function ReportDetailsScreen() {
               <Text style={styles.emptyPhotosText}>Captured nothing yet — take a photo first</Text>
             </Pressable>
           )}
-          {photos.length > 0 && photos.length < 5 && (
+          {photos.length > 0 && photos.length < 2 && (
             <Pressable style={styles.addPhotoBtn} onPress={handleAddPhoto}>
               <Text style={styles.addPhotoText}>+</Text>
             </Pressable>
